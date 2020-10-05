@@ -1,0 +1,99 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+import tensorflow as tf
+
+# Load the MNIST dataset 
+mnist = tf.keras.datasets.mnist
+
+# Seperate into train and test data and labels
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+# Preprocess for more stable training of the neural network by 
+#normalizing the data values to be between 0 and 1
+x_train = x_train / 255.0
+x_test = x_test / 255.0
+
+x_train.shape
+
+y_train.shape
+
+x_test.shape
+
+y_test.shape
+
+train_idx = 2
+plt.imshow(x_train[train_idx], cmap='gray')
+plt.title('Label:{}'.format(y_train[train_idx]))
+plt.show()
+
+#Building neural network. Using tf.keras.Sequential model by
+#stacking layers
+#First the model will flatten its input from 28x28 to be a 1x784
+#then I add a dense layer (this is a standard neural network layer)
+#with 32 neurons and RelU activation 
+#A dropout layer keeps the model from overfitting. 
+#The final layer is the output. There are 10 nodes, one for each 
+#class (digit in this case) that I want to predict 
+
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Flatten(input_shape=(28,28)),
+    tf.keras.layers.Dense(33, activation = 'relu'),
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(10)
+])
+
+#havent trained model yet so will get random digits
+predictions = model(x_train[:1]).numpy()
+predictions
+
+#Raw numbers output by a neural net are called logits, and there 
+#should be 10 for each class. Sometimes want probabilities so our
+#results are easily interpretable Could use softmaz function to 
+#make sure that the outputs are between 0 and 1 (like sigmoid) 
+#and also that output sum to 1; this is what allows us to interpret
+#as probabilities 
+
+tf.nn.softmax(predictions).numpy()
+
+# Next I need a loss function to calculate how good a job our model is doing
+#at predicting the correct class label (digit) for each example (image)
+#The loss function will operate on the logits coming out of the model 
+#and compute the negative log probability of the true class. 
+
+loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits = True)
+
+#now I can compile out model, which means get it ready for training
+#by telling it which opitmizer it should use(ADAM - enhanced version of 
+#gradient descent), what lost function it should use, and any metrics
+#I want to see as training progresses (I'll track the accuracy)
+
+model.compile(optimizer = 'adam',
+             loss = loss_fn,
+             metrics = ['accuracy'])
+             
+#At last I are ready to fit/train our model using the training data x 
+#and labels (y). The last param, epochs, tells TensorFlow how long to train
+#One epoch means that the optimizer sees every training example one time. 
+#so training for 2 epochs means going through training data 2 times. 
+model.fit(x_train, y_train, epochs = 3)
+
+#After training, I can see how well the model generalizes on the test set
+model.evaluate(x_test, y_test, verbose=2)
+
+probability_model = tf.keras.Sequential([
+    model, 
+    tf.keras.layers.Softmax()
+])
+
+#If I run a test example through this prob model, I'll get 10 probabilities
+#out 
+#picked test example at index 200, displayed the image, then showed the 10
+#probabilities output from the probability model. The prob corresponding 
+#to 3 (the right answer) is by far the highest (98%)
+test_idx = 200
+plt.imshow(x_test[test_idx], cmap = plt.cm.gray)
+plt.title('Correct label: {}'.format(y_test[test_idx]))
+plt.show()
+print('Predicted probabilities:')
+probability_model(x_test[test_idx:test_idx+1])
